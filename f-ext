@@ -18,16 +18,22 @@ file=$(find / -type f -iname "*.$ext" 2>/dev/null | fzf-tmux -p --reverse --exac
     text/*) bat --style=plain --color=always {} ;;
     application/pdf) pdftotext {} - ;;
     image/*) exiftool {} ;;
+    application/zip) unzip -l {} ;;
+    application/x-tar) tar -tf {} ;;
     *) file {} ;;
   esac')
 
 case "$ext" in
+    txt|md|log|c|cpp|h|rs|hs|go|py|sh|ts|js|html|css)
+        vim "$file" ;;
     pdf)
         xpdf "$file" ;;
     png|jpg|jpeg|gif|bmp|svg)
         xdg-open "$file" ;;
-    txt|md|log|c|cpp|h|rs|hs|go|py|sh|ts|js|html|css)
-        vim "$file" ;;
+    zip)
+        unzip "$file" ;;
+    tar|tar.gz|tgz)
+        tar -xvf "$file" ;;
     *)
         xdg-open "$file" ;;
 esac
