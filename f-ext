@@ -1,0 +1,32 @@
+#!/usr/bin/env sh
+
+usage() {
+    echo "f-ext"
+    echo "Find files by extension"
+}
+
+f-ext() {
+    printf "File extension: "
+    read ext
+
+    if [ -z "$ext" ]; then
+        usage
+        return 1
+    fi
+
+    file=$(find / -type f -iname "*.$ext" 2>/dev/null | fzf-tmux -p --reverse --preview 'file {} && (bat --style=plain --color=always {} || head -n 100 {})')
+
+    case "$ext" in
+        pdf)
+            xpdf "$file" ;;
+        png|jpg|jpeg|gif|bmp|svg)
+            xdg-open "$file" ;;
+        txt|md|log|c|cpp|h|py|sh)
+            vim "$file" ;;
+        *)
+            echo "No designated handler for .$ext files, attempting xdg-open."
+            xdg-open "$file" ;;
+    esac
+}
+
+
