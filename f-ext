@@ -1,5 +1,13 @@
 #!/usr/bin/env sh
 
+#   __                 _
+#  / _|       _____  _| |_
+# | |_ _____ / _ \ \/ / __|
+# |  _|_____|  __/>  <| |_
+# |_|        \___/_/\_\\__|
+#
+# fuzzy file finder - by extension
+
 usage() {
     echo "f-ext"
     echo "Find files by extension"
@@ -37,4 +45,3 @@ case "$ext" in
     *)
         xdg-open "$file" ;;
 esac
-

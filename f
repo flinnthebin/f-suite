@@ -1,5 +1,19 @@
 #!/usr/bin/env sh
 
-file=$(find / -type f 2>/dev/null | fzf --preview '[[ $(file --mime {}) =~ text/ ]] && (bat --style=plain --color=always {} || head -n 100 {}) || file {}')
-[ -n "$file" ] && vim "$file"
+#   __
+#  / _|
+# | |_
+# |  _|
+# |_|
+#
+# fuzzy file finder
 
+file=$(find / -type f 2>/dev/null | fzf --preview '
+  mime=$(file --mime-type -b {})
+  case "$mime" in
+    text/*) bat --style=plain --color=always {} ;;
+    *) file {} ;;
+  esac
+')
+
+[ -n "$file" ] && vim "$file"
