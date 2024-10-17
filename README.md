@@ -6,26 +6,15 @@ linux file finding, because sometimes you want to sort through pngs like they're
 2. **fd**: Navigate directories and preview their contents.
 3. **f-ext**: Find files by their file type.
 
-## Table of Contents
-- [Dependencies](#dependencies)
-- [Installation](#installation)
-  - [Arch Linux](#arch-linux)
-  - [Ubuntu](#ubuntu)
-- [Cloning the Repository](#cloning-the-repository)
-- [Installing f-suite](#installing-f-suite)
-- [Usage](#usage)
-
----
-
 ## Dependencies
 
-### Arch
+Arch
 
 ```sh
 sudo pacman -S fzf bat exiftool poppler unzip xpdf vim tmux
 ```
 
-### Ubuntu
+Ubuntu
 
 ```sh
 sudo apt update
