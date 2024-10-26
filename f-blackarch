@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+
+# f-blackarch
+# Find a program based on its BlackArch group name
+
+set -e
+
+usage() {
+    echo "Usage: f-blackarch"
+    echo "Find a program based on its BlackArch group name"
+}
+
+# Retrieve the list of BlackArch groups
+groups=$(pacman -Sg | awk '{print $1}' | sort -u | grep '^blackarch-')
+
+if [ -z "$groups" ]; then
+    echo "No BlackArch groups found."
+    exit 1
+fi
+
+# Use fzf to select a group with exact pattern matching
+groupname=$(echo "$groups" | fzf --reverse --prompt="Select a BlackArch group: " --exact)
+
+if [ -z "$groupname" ]; then
+    echo "No group selected."
+    exit 1
+fi
+
+# Get the packages in the selected group
+packages=$(pacman -Sg "$groupname" 2>/dev/null | awk '{print $2}')
+
+if [ -z "$packages" ]; then
+    echo "No packages found for group '$groupname'"
+    exit 1
+fi
+
+# Build the list of packages with descriptions
+declare -a list
+for pkg in $packages; do
+    desc=$(pacman -Si "$pkg" 2>/dev/null | awk -F ': ' '/^Description/ {print $2}')
+    list+=("$pkg - $desc")
+done
+
+# Use fzf to select a package with exact pattern matching
+selected=$(printf '%s\n' "${list[@]}" | fzf --reverse --prompt="Select a package: " --exact)
+
+if [ -z "$selected" ]; then
+    echo "No package selected"
+    exit 1
+fi
+
+# Extract package name from the selected line
+pkg=$(echo "$selected" | awk -F ' - ' '{print $1}')
+
+echo "Selected package: $pkg"
+
+# Offer options: Install, Info, Quit
+PS3="Choose an action: "
+options=("Install" "Info" "Quit")
+select opt in "${options[@]}"; do
+    case $opt in
+        "Install")
+            sudo pacman -S "$pkg"
+            break
+            ;;
+        "Info")
+            pacman -Si "$pkg"
+            break
+            ;;
+        "Quit")
+            break
+            ;;
+        *) echo "Invalid option";;
+    esac
+done
+
