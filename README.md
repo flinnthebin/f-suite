@@ -1,10 +1,13 @@
 # f-suite
 
-linux file finding, because sometimes you want to sort through pngs like they're in a rolodex.
+linux file stuff
 
 1. **f**: Find files and preview their contents.
 2. **fd**: Navigate directories and preview their contents.
 3. **f-ext**: Find files by their file type.
+4. **f-blackarch**: Find tools on the blackarch toolchain.
+5. **f-scrub**: Scrub a jpg.
+
 
 ## Dependencies
 
