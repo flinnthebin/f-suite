@@ -6,7 +6,7 @@ linux file stuff
 2. **fd**: Navigate directories and preview their contents.
 3. **f-ext**: Find files by their file type.
 4. **f-blackarch**: Find tools on the blackarch toolchain.
-5. **f-scrub**: Scrub a jpg.
+5. **f-scrub**: Scrub an image. 
 
 
 ## Dependencies
