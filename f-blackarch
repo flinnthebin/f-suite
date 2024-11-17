@@ -17,6 +17,6 @@ fi
 tools=$(pacman -Sg "$groupname" | awk '{print $2}' | sort -u)
 
 # Get descriptions
-tool_descriptions=$(pacman -Qi $tools 2>/dev/null | awk -v RS='' '/^Name/{print $2": "$0}')
+tool_descriptions=$(pacman -Qi $tools 2>/dev/null | awk -v RS='' '/^Name/ {print $2$2" "$3"\n"$4$5" "$6}')
 
 toolname=$(echo "$tool_descriptions" | fzf --reverse --prompt="Select a tool in $groupname: " --exact | cut -d':' -f1)
