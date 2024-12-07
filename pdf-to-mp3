@@ -1,3 +1,4 @@
+
 #!/usr/bin/env sh
 
 if [ $# -lt 1 ]; then
@@ -16,58 +17,46 @@ TXT_FILE="${BASENAME}.txt"
 FINAL_AUDIO="${BASENAME}.mp3"
 WORKDIR=".audiobook"
 
-# Create working directory
 mkdir -p "$WORKDIR"
 
-# Extract text from PDF
 pdftotext "$PDF_FILE" "$TXT_FILE"
 if [ $? -ne 0 ]; then
   echo "Error extracting text from PDF."
   exit 1
 fi
 
-# Split the text file into 1000-line chunks
 split -l 1000 "$TXT_FILE" "${WORKDIR}/chunk_"
 if [ $? -ne 0 ]; then
-  echo "Error splitting the text file."
+  echo "Error splitting text file."
   exit 1
 fi
 
-# Convert each chunk into WAV using Festival
-for CHUNK in "${WORKDIR}"/chunk_*; do
-  CHUNK_WAV="${CHUNK}.wav"
-  echo "Processing $CHUNK..."
-  text2wave "$CHUNK" -o "$CHUNK_WAV" -eval "(voice_cmu_us_slt_cg)"
-  if [ $? -ne 0 ]; then
-    echo "Error generating audio for $CHUNK."
-    exit 1
-  fi
-done
+ls "${WORKDIR}"/chunk_* | parallel -j8 text2wave {} -o {}.wav -eval "(voice_cmu_us_slt_cg)"
+if [ $? -ne 0 ]; then
+  echo "Error generating audio."
+  exit 1
+fi
 
-# Create a file list for ffmpeg concat
-MP3_LIST="${WORKDIR}/wav_files.txt"
-: > "$MP3_LIST"
+WAV_LIST="${WORKDIR}/wav_files.txt"
+: > "$WAV_LIST"
 
 for CHUNK_WAV in "${WORKDIR}"/chunk_*.wav; do
-  echo "file '$(pwd)/${CHUNK_WAV}'" >> "$MP3_LIST"
+  echo "file '$(pwd)/${CHUNK_WAV}'" >> "$WAV_LIST"
 done
 
-# Concatenate all WAV files into one large WAV
 COMBINED_WAV="${WORKDIR}/combined.wav"
-ffmpeg -f concat -safe 0 -i "$MP3_LIST" -c copy "$COMBINED_WAV"
+ffmpeg -f concat -safe 0 -i "$WAV_LIST" -c copy "$COMBINED_WAV"
 if [ $? -ne 0 ]; then
-  echo "Error concatenating audio files."
+  echo "Error concatenating WAV files."
   exit 1
 fi
 
-# Speed up the final audio (adjust 'atempo' as desired)
 ffmpeg -i "$COMBINED_WAV" -filter:a "atempo=1.5" -vn "$FINAL_AUDIO"
 if [ $? -ne 0 ]; then
   echo "Error adjusting audio speed."
   exit 1
 fi
 
-# Cleanup
 rm -rf "$WORKDIR"
 rm "$TXT_FILE"
 
