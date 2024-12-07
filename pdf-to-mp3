@@ -23,7 +23,7 @@ if [ "$DIR_MODE" = true ]; then
     shift
   else
     DIR_PATH=".audiobook"
-  fi
+    fi
 fi
 
 if [ "$TEXT_MODE" = true ] && [ "$DIR_MODE" = true ]; then
@@ -79,24 +79,23 @@ if [ "$DIR_MODE" = false ]; then
   mkdir -p "$WORKDIR"
 
   if [ "$TEXT_MODE" = false ]; then
-    echo "Extracting text from PDF..."
     pdftotext "$PDF_FILE" "$TXT_FILE"
   else
     cp "$TXT_SOURCE" "$WORKDIR/input.txt"
     TXT_FILE="$WORKDIR/input.txt"
   fi
 
-  echo "Splitting text file..."
   split -l 1000 "$TXT_FILE" "${WORKDIR}/chunk_"
 
-  echo "Converting chunks to WAV in parallel..."
   parallel -j8 text2wave '{}' -o '{}.wav' -eval '(voice_cmu_us_slt_cg)' ::: "${WORKDIR}/chunk_"*
 
-  WAV_LIST="${WORKDIR}/wav_files.txt"
-  : > "$WAV_LIST"
+  ls "${WORKDIR}"/chunk_*.wav | parallel -j8 ffmpeg -i {} -filter:a "atempo=1.5" -vn -c:a libmp3lame -b:a 192k {}.mp3
 
-  for CHUNK_WAV in "${WORKDIR}"/chunk_*.wav; do
-    echo "file '$(pwd)/${CHUNK_WAV}'" >> "$WAV_LIST"
+  MP3_LIST="${WORKDIR}/mp3_files.txt"
+  : > "$MP3_LIST"
+
+  for CHUNK_MP3 in "${WORKDIR}"/chunk_*.wav.mp3; do
+    echo "file '$(pwd)/${CHUNK_MP3}'" >> "$MP3_LIST"
   done
 else
   if [ ! -d "$WORKDIR" ]; then
@@ -112,14 +111,11 @@ else
 fi
 
 COMBINED_WAV="${WORKDIR}/combined.wav"
-echo "Concatenating WAV files..."
-ffmpeg -f concat -safe 0 -i "$WAV_LIST" -c copy -rf64 auto "$COMBINED_WAV"
 
-echo "Adjusting playback speed..."
-ffmpeg -i "$COMBINED_WAV" -filter:a "atempo=1.5" -vn "$FINAL_AUDIO"
+ffmpeg -f concat -safe 0 -i "$MP3_LIST" -c copy "$FINAL_AUDIO"
 
 if [ "$DIR_MODE" = false ]; then
-  echo "Cleaning up..."
+  echo "Cleaning up $WORKDIR"
   rm -rf "$WORKDIR"
   if [ "$TEXT_MODE" = false ]; then
     rm "$TXT_FILE"
