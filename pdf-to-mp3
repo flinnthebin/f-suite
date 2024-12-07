@@ -1,64 +1,133 @@
 #!/usr/bin/env sh
 
-if [ $# -lt 1 ]; then
-  echo "Usage: $0 <PDF file>"
+set -e
+
+TEXT_MODE=false
+DIR_MODE=false
+DIR_PATH=""
+PDF_FILE=""
+TXT_SOURCE=""
+
+while getopts ":td" opt; do
+  case $opt in
+    t) TEXT_MODE=true ;;
+    d) DIR_MODE=true ;;
+    \?) echo "Invalid option: -$OPTARG" 1>&2; exit 1 ;;
+  esac
+done
+shift $((OPTIND -1))
+
+if [ "$DIR_MODE" = true ]; then
+  if [ $# -gt 0 ] && [ "${1#-}" = "$1" ]; then
+    DIR_PATH="$1"
+    shift
+  else
+    DIR_PATH=".audiobook"
+  fi
+fi
+
+if [ "$TEXT_MODE" = true ] && [ "$DIR_MODE" = true ]; then
+  echo "Error: Cannot use -t and -d together."
   exit 1
 fi
 
-PDF_FILE="$1"
-if [ ! -f "$PDF_FILE" ]; then
-  echo "File not found: $PDF_FILE"
-  exit 1
+if [ "$DIR_MODE" = false ] && [ "$TEXT_MODE" = false ]; then
+  if [ $# -lt 1 ]; then
+    echo "Usage: $0 <PDF file>"
+    exit 1
+  fi
+  PDF_FILE="$1"
+  if [ ! -f "$PDF_FILE" ]; then
+    echo "File not found: $PDF_FILE"
+    exit 1
+  fi
+elif [ "$TEXT_MODE" = true ]; then
+  if [ $# -lt 1 ]; then
+    echo "Usage: $0 -t <TXT file>"
+    exit 1
+  fi
+  TXT_SOURCE="$1"
+  if [ ! -f "$TXT_SOURCE" ]; then
+    echo "File not found: $TXT_SOURCE"
+    exit 1
+  fi
 fi
 
-BASENAME="${PDF_FILE%.pdf}"
+if [ "$DIR_MODE" = true ]; then
+  if [ -n "$DIR_PATH" ] && [ "$DIR_PATH" != ".audiobook" ]; then
+    BASENAME="$(basename "$DIR_PATH")"
+  else
+    BASENAME="final"
+  fi
+else
+  if [ "$TEXT_MODE" = true ]; then
+    BASENAME="${TXT_SOURCE%.txt}"
+  else
+    BASENAME="${PDF_FILE%.pdf}"
+  fi
+fi
+
 TXT_FILE="${BASENAME}.txt"
 FINAL_AUDIO="${BASENAME}.mp3"
 WORKDIR=".audiobook"
 
-mkdir -p "$WORKDIR"
-
-pdftotext "$PDF_FILE" "$TXT_FILE"
-if [ $? -ne 0 ]; then
-  echo "Error extracting text from PDF."
-  exit 1
+if [ "$DIR_MODE" = true ]; then
+  WORKDIR="$DIR_PATH"
 fi
 
-split -l 1000 "$TXT_FILE" "${WORKDIR}/chunk_"
-if [ $? -ne 0 ]; then
-  echo "Error splitting text file."
-  exit 1
+if [ "$DIR_MODE" = false ]; then
+  mkdir -p "$WORKDIR"
+
+  if [ "$TEXT_MODE" = false ]; then
+    echo "Extracting text from PDF..."
+    pdftotext "$PDF_FILE" "$TXT_FILE"
+  else
+    cp "$TXT_SOURCE" "$WORKDIR/input.txt"
+    TXT_FILE="$WORKDIR/input.txt"
+  fi
+
+  echo "Splitting text file..."
+  split -l 1000 "$TXT_FILE" "${WORKDIR}/chunk_"
+
+  echo "Converting chunks to WAV in parallel..."
+  parallel -j8 text2wave '{}' -o '{}.wav' -eval '(voice_cmu_us_slt_cg)' ::: "${WORKDIR}/chunk_"*
+
+  WAV_LIST="${WORKDIR}/wav_files.txt"
+  : > "$WAV_LIST"
+
+  for CHUNK_WAV in "${WORKDIR}"/chunk_*.wav; do
+    echo "file '$(pwd)/${CHUNK_WAV}'" >> "$WAV_LIST"
+  done
+else
+  if [ ! -d "$WORKDIR" ]; then
+    echo "Error: Work directory $WORKDIR does not exist. Cannot resume."
+    exit 1
+  fi
+
+  WAV_LIST="${WORKDIR}/wav_files.txt"
+  if [ ! -f "$WAV_LIST" ]; then
+    echo "Error: $WAV_LIST does not exist. Cannot resume."
+    exit 1
+  fi
 fi
-
-ls "${WORKDIR}"/chunk_* | parallel -j8 text2wave '{}' -o '{}.wav' -eval '\(voice_cmu_us_slt_cg\)' ::: "${WORKDIR}"/chunk_*
-if [ $? -ne 0 ]; then
-  echo "Error generating audio."
-  exit 1
-fi
-
-WAV_LIST="${WORKDIR}/wav_files.txt"
-: > "$WAV_LIST"
-
-for CHUNK_WAV in "${WORKDIR}"/chunk_*.wav; do
-  echo "file '$(pwd)/${CHUNK_WAV}'" >> "$WAV_LIST"
-done
 
 COMBINED_WAV="${WORKDIR}/combined.wav"
+echo "Concatenating WAV files..."
 ffmpeg -f concat -safe 0 -i "$WAV_LIST" -c copy "$COMBINED_WAV"
-if [ $? -ne 0 ]; then
-  echo "Error concatenating WAV files."
-  exit 1
-fi
 
+echo "Adjusting playback speed..."
 ffmpeg -i "$COMBINED_WAV" -filter:a "atempo=1.5" -vn "$FINAL_AUDIO"
-if [ $? -ne 0 ]; then
-  echo "Error adjusting audio speed."
-  exit 1
-fi
 
-# Cleanup
-rm -rf "$WORKDIR"
-rm "$TXT_FILE"
+if [ "$DIR_MODE" = false ]; then
+  echo "Cleaning up..."
+  rm -rf "$WORKDIR"
+  if [ "$TEXT_MODE" = false ]; then
+    rm "$TXT_FILE"
+  else
+    if [ -f "$WORKDIR/input.txt" ]; then
+      rm "$WORKDIR/input.txt"
+    fi
+  fi
+fi
 
 echo "$FINAL_AUDIO successfully generated!"
-hj
