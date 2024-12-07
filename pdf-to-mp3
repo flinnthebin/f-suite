@@ -87,7 +87,7 @@ if [ "$DIR_MODE" = false ]; then
 
   split -l 1000 "$TXT_FILE" "${WORKDIR}/chunk_"
 
-  parallel -j8 text2wave '{}' -o '{}.wav' -eval '(voice_cmu_us_slt_cg)' ::: "${WORKDIR}/chunk_"*
+  parallel -j8 text2wave '{}' -o '{}.wav' -eval '\(voice_cmu_us_slt_cg\)' ::: "${WORKDIR}/chunk_"*
 
   ls "${WORKDIR}"/chunk_*.wav | parallel -j8 ffmpeg -i {} -filter:a "atempo=1.5" -vn -c:a libmp3lame -b:a 192k {}.mp3
 
@@ -103,10 +103,10 @@ else
     exit 1
   fi
 
-  WAV_LIST="${WORKDIR}/wav_files.txt"
-  if [ ! -f "$WAV_LIST" ]; then
-    echo "Error: $WAV_LIST does not exist. Cannot resume."
-    exit 1
+  MP3_LIST="${WORKDIR}/mp3_files.txt"
+  if [ ! -f "$MP3_LIST" ]; then
+  echo "Error: $MP3_LIST does not exist. Cannot resume."
+  exit 1
   fi
 fi
 
