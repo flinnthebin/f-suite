@@ -113,7 +113,7 @@ fi
 
 COMBINED_WAV="${WORKDIR}/combined.wav"
 echo "Concatenating WAV files..."
-ffmpeg -f concat -safe 0 -i "$WAV_LIST" -c copy "$COMBINED_WAV"
+ffmpeg -f concat -safe 0 -i "$WAV_LIST" -c copy -rf64 auto "$COMBINED_WAV"
 
 echo "Adjusting playback speed..."
 ffmpeg -i "$COMBINED_WAV" -filter:a "atempo=1.5" -vn "$FINAL_AUDIO"
