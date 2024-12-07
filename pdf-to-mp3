@@ -6,63 +6,68 @@ if [ $# -lt 1 ]; then
 fi
 
 PDF_FILE="$1"
-
 if [ ! -f "$PDF_FILE" ]; then
   echo "File not found: $PDF_FILE"
   exit 1
 fi
 
-# Base names
 BASENAME="${PDF_FILE%.pdf}"
 TXT_FILE="${BASENAME}.txt"
 FINAL_AUDIO="${BASENAME}.mp3"
-
 WORKDIR=".audiobook"
 
+# Create working directory
 mkdir -p "$WORKDIR"
 
+# Extract text from PDF
 pdftotext "$PDF_FILE" "$TXT_FILE"
 if [ $? -ne 0 ]; then
-  echo "Error extracting text with pdftotext."
+  echo "Error extracting text from PDF."
   exit 1
 fi
 
+# Split the text file into 1000-line chunks
 split -l 1000 "$TXT_FILE" "${WORKDIR}/chunk_"
 if [ $? -ne 0 ]; then
-  echo "Error splitting text file."
+  echo "Error splitting the text file."
   exit 1
 fi
 
+# Convert each chunk into WAV using Festival
 for CHUNK in "${WORKDIR}"/chunk_*; do
-  CHUNK_MP3="${CHUNK}.mp3"
+  CHUNK_WAV="${CHUNK}.wav"
   echo "Processing $CHUNK..."
-  gtts-cli -f "$CHUNK" -o "$CHUNK_MP3"
+  text2wave "$CHUNK" -o "$CHUNK_WAV" -eval "(voice_cmu_us_slt_cg)"
   if [ $? -ne 0 ]; then
     echo "Error generating audio for $CHUNK."
     exit 1
   fi
 done
 
-MP3_LIST="${WORKDIR}/mp3_files.txt"
+# Create a file list for ffmpeg concat
+MP3_LIST="${WORKDIR}/wav_files.txt"
 : > "$MP3_LIST"
 
-for CHUNK_MP3 in "${WORKDIR}"/chunk_*.mp3; do
-  echo "file '$(pwd)/${CHUNK_MP3}'" >> "$MP3_LIST"
+for CHUNK_WAV in "${WORKDIR}"/chunk_*.wav; do
+  echo "file '$(pwd)/${CHUNK_WAV}'" >> "$MP3_LIST"
 done
 
-COMBINED_MP3="${WORKDIR}/combined.mp3"
-ffmpeg -f concat -safe 0 -i "$MP3_LIST" -c copy "$COMBINED_MP3"
+# Concatenate all WAV files into one large WAV
+COMBINED_WAV="${WORKDIR}/combined.wav"
+ffmpeg -f concat -safe 0 -i "$MP3_LIST" -c copy "$COMBINED_WAV"
 if [ $? -ne 0 ]; then
   echo "Error concatenating audio files."
   exit 1
 fi
 
-ffmpeg -i "$COMBINED_MP3" -filter:a "atempo=1.5" -vn "$FINAL_AUDIO"
+# Speed up the final audio (adjust 'atempo' as desired)
+ffmpeg -i "$COMBINED_WAV" -filter:a "atempo=1.5" -vn "$FINAL_AUDIO"
 if [ $? -ne 0 ]; then
   echo "Error adjusting audio speed."
   exit 1
 fi
 
+# Cleanup
 rm -rf "$WORKDIR"
 rm "$TXT_FILE"
 
