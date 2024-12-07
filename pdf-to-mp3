@@ -1,0 +1,33 @@
+#!/usr/bin/env sh
+
+if [ $# -lt 1 ]; then
+  echo "Usage: $0 <PDF file>"
+  exit 1
+fi
+
+PDF_FILE="$1"
+TXT_FILE="${PDF_FILE%.pdf}.txt"
+MID_FILE="MID_FILE.mp3"
+AUDIO_FILE="${PDF_FILE%.pdf}.mp3"
+
+pdftotext "$PDF_FILE" "$TXT_FILE"
+if [ $? -ne 0 ]; then
+  echo "pdftotext error."
+  exit 1
+fi
+
+gtts-cli -f "$TXT_FILE" -o "$MID_FILE"
+if [ $? -ne 0 ]; then
+  echo "gtts error."
+  exit 1
+fi
+
+ffmpeg -i "$MID_FILE" -filter:a "atempo=1.5" -vn "$AUDIO_FILE"
+if [ $? -ne 0 ]; then
+  echo "ffmpg error."
+  exit 1
+fi
+
+rm "$MID_FILE"
+echo "$AUDIO_FILE successfully generated"
+
