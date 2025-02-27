@@ -1,14 +1,24 @@
 #!/usr/bin/env sh
+#
+# Usage:
+#   Simple spider mode (no regex check):
+#       ./wget_spider.sh [-o output_log] [-c client_cert.pem] [-p cert_password] URL
+#
+#   To download pages and search for a regex pattern:
+#       ./wget_spider.sh [-o output_log] [-c client_cert.pem] [-p cert_password] -x "regex_pattern" URL
+#
+
 outfile="wget_output.txt"
 client_cert=""
 client_pass=""
+regex_pattern=""
 
 usage() {
-  echo "Usage: $0 [-o output_file] [-c client_cert_file] [-p client_cert_password] URL"
+  echo "Usage: $0 [-o output_log] [-c client_cert.pem] [-p cert_password] [-x regex_pattern] URL"
   exit 1
 }
 
-while getopts ":o:c:p:" opt; do
+while getopts ":o:c:p:x:" opt; do
   case ${opt} in
     o)
       outfile="$OPTARG"
@@ -18,6 +28,9 @@ while getopts ":o:c:p:" opt; do
       ;;
     p)
       client_pass="$OPTARG"
+      ;;
+    x)
+      regex_pattern="$OPTARG"
       ;;
     :)
       echo "Error: Option -$OPTARG requires an argument."
@@ -37,40 +50,64 @@ if [ $# -ne 1 ]; then
 fi
 
 url="$1"
+echo "Target URL: $url"
+echo "Logging wget output to: $outfile"
 
-echo "Running wget --spider mode on URL: $url"
-echo "Logging output to: $outfile"
-
+use_temp_cert=0
 if [ -n "$client_cert" ]; then
   if [ -n "$client_pass" ]; then
-    echo "Using client certificate: $client_cert with provided password."
-    # Create temporary files for the extracted certificate and decrypted private key
-    tmp_cert=$(mktemp) || { echo "Error creating temporary file."; exit 1; }
-    tmp_key=$(mktemp) || { echo "Error creating temporary file."; exit 1; }
-
-    # Extract the certificate portion from the client file
-    if ! openssl x509 -in "$client_cert" -out "$tmp_cert"; then
+    tmp_cert=$(mktemp) || { echo "Error creating temp cert file"; exit 1; }
+    tmp_key=$(mktemp) || { echo "Error creating temp key file"; exit 1; }
+    
+    echo "Using client certificate: $client_cert (with password)"
+    if ! openssl x509 -in "$client_cert" -out "$tmp_cert" 2>/dev/null; then
       echo "Error extracting certificate from $client_cert"
       rm -f "$tmp_cert" "$tmp_key"
       exit 1
     fi
 
-    # Decrypt the private key using the provided password
-    if ! openssl rsa -in "$client_cert" -passin pass:"$client_pass" -out "$tmp_key"; then
-      echo "Error decrypting private key from $client_cert"
+    if ! openssl rsa -in "$client_cert" -passin pass:"$client_pass" -out "$tmp_key" 2>/dev/null; then
+      echo "Error extracting private key from $client_cert"
       rm -f "$tmp_cert" "$tmp_key"
       exit 1
     fi
-
-    # Execute wget using the temporary certificate and key files.
-    wget -r --spider --certificate="$tmp_cert" --private-key="$tmp_key" "$url" -o "$outfile"
-
-    # Clean up temporary files
-    rm -f "$tmp_cert" "$tmp_key"
+    cert_opt="--certificate=$tmp_cert"
+    key_opt="--private-key=$tmp_key"
+    use_temp_cert=1
   else
-    echo "Using client certificate: $client_cert (no password provided)."
-    wget -r --spider --certificate="$client_cert" --private-key="$client_cert" "$url" -o "$outfile"
+    echo "Using client certificate: $client_cert (no password provided)"
+    cert_opt="--certificate=$client_cert"
+    key_opt="--private-key=$client_cert"
   fi
 else
-  wget -r --spider "$url" -o "$outfile"
+  cert_opt=""
+  key_opt=""
+fi
+
+if [ -n "$regex_pattern" ]; then
+  echo "Regex search enabled. Pattern: $regex_pattern"
+  tmp_download_dir=$(mktemp -d) || { echo "Error creating temporary download directory"; exit 1; }
+  echo "Downloading website content into temporary directory: $tmp_download_dir"
+  
+  if [ -n "$cert_opt" ] || [ -n "$key_opt" ]; then
+    wget -r -P "$tmp_download_dir" $cert_opt $key_opt "$url" -o "$outfile"
+  else
+    wget -r -P "$tmp_download_dir" "$url" -o "$outfile"
+  fi
+  
+  echo "Searching downloaded pages for regex: $regex_pattern"
+  grep -R -n "$regex_pattern" "$tmp_download_dir"
+  
+  rm -rf "$tmp_download_dir"
+else
+  echo "Running wget in spider mode..."
+  if [ -n "$cert_opt" ] || [ -n "$key_opt" ]; then
+    wget -r --spider $cert_opt $key_opt "$url" -o "$outfile"
+  else
+    wget -r --spider "$url" -o "$outfile"
+  fi
+fi
+
+if [ "$use_temp_cert" -eq 1 ]; then
+  rm -f "$tmp_cert" "$tmp_key"
 fi
