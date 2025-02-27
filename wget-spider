@@ -1,0 +1,35 @@
+#!/usr/bin/env sh
+
+outfile="wget_output.txt"
+
+usage() {
+  echo "Usage: $0 [-o output_file] URL"
+  exit 1
+}
+
+while getopts ":o:" opt; do
+  case ${opt} in
+    o)
+      outfile="$OPTARG"
+      ;;
+    :)
+      echo "Error: Option -$OPTARG requires an argument."
+      usage
+      ;;
+    \?)
+      echo "Error: Invalid option -$OPTARG"
+      usage
+      ;;
+  esac
+done
+
+shift $((OPTIND - 1))
+if [ $# -ne 1 ]; then
+  echo "Error: Missing URL."
+  usage
+fi
+
+url="$1"
+echo "Running wget --spider mode on URL: $url"
+echo "Logging output to: $outfile"
+wget -r --spider "$url" -o "$outfile"
