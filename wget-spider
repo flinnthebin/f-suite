@@ -89,7 +89,7 @@ if [ -n "$client_cert" ]; then
     wget -r $mode_option --certificate="$client_cert" --private-key="$client_cert" "$url" -o "$outfile"
   fi
 else
-  wget -r $mode_option "$url" -o "$outfile"
+  wget -r --ignore-robots $mode_option "$url" -o "$outfile"
 fi
 
-echo "Script execution completed."
+echo "Spidering complete."
