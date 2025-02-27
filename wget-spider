@@ -1,16 +1,23 @@
 #!/usr/bin/env sh
-
 outfile="wget_output.txt"
+client_cert=""
+client_pass=""
 
 usage() {
-  echo "Usage: $0 [-o output_file] URL"
+  echo "Usage: $0 [-o output_file] [-c client_cert_file] [-p client_cert_password] URL"
   exit 1
 }
 
-while getopts ":o:" opt; do
+while getopts ":o:c:p:" opt; do
   case ${opt} in
     o)
       outfile="$OPTARG"
+      ;;
+    c)
+      client_cert="$OPTARG"
+      ;;
+    p)
+      client_pass="$OPTARG"
       ;;
     :)
       echo "Error: Option -$OPTARG requires an argument."
@@ -30,6 +37,40 @@ if [ $# -ne 1 ]; then
 fi
 
 url="$1"
+
 echo "Running wget --spider mode on URL: $url"
 echo "Logging output to: $outfile"
-wget -r --spider "$url" -o "$outfile"
+
+if [ -n "$client_cert" ]; then
+  if [ -n "$client_pass" ]; then
+    echo "Using client certificate: $client_cert with provided password."
+    # Create temporary files for the extracted certificate and decrypted private key
+    tmp_cert=$(mktemp) || { echo "Error creating temporary file."; exit 1; }
+    tmp_key=$(mktemp) || { echo "Error creating temporary file."; exit 1; }
+
+    # Extract the certificate portion from the client file
+    if ! openssl x509 -in "$client_cert" -out "$tmp_cert"; then
+      echo "Error extracting certificate from $client_cert"
+      rm -f "$tmp_cert" "$tmp_key"
+      exit 1
+    fi
+
+    # Decrypt the private key using the provided password
+    if ! openssl rsa -in "$client_cert" -passin pass:"$client_pass" -out "$tmp_key"; then
+      echo "Error decrypting private key from $client_cert"
+      rm -f "$tmp_cert" "$tmp_key"
+      exit 1
+    fi
+
+    # Execute wget using the temporary certificate and key files.
+    wget -r --spider --certificate="$tmp_cert" --private-key="$tmp_key" "$url" -o "$outfile"
+
+    # Clean up temporary files
+    rm -f "$tmp_cert" "$tmp_key"
+  else
+    echo "Using client certificate: $client_cert (no password provided)."
+    wget -r --spider --certificate="$client_cert" --private-key="$client_cert" "$url" -o "$outfile"
+  fi
+else
+  wget -r --spider "$url" -o "$outfile"
+fi
