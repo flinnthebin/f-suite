@@ -32,7 +32,7 @@ from bs4 import BeautifulSoup
 # ----- Configuration -----
 cert = "/home/archer/uni/COMP6843/z3291100.pem"
 flag_pattern = re.compile(r"COMP6443\{.*?\}")
-wordlist = "/usr/share/seclists/Discovery/Web-Content/directory-list-2.3-small.txt"
+wordlist = "/home/archer/uni/COMP6843/visited_urls.txt"
 target = "https://spiderman.quoccacorp.com"
 initial_delay = 0.5
 
