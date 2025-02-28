@@ -1,8 +1,0 @@
-#!/usr/bin/python
-
-import requests
-s = requests.session()
-s.cert = "/home/archer/uni/COMP6843/z3291100.pem"
-
-r = s.get("https://whoami.quoccacorp.com")
-print(r.content)
