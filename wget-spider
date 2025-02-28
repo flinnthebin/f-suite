@@ -86,3 +86,9 @@ if [ "$save_mode" -eq 1 ]; then
   find "$download_dir" -type f | sed "s|^$download_dir/|https://|g" > visited_urls.txt
   echo "Visited URLs wordlist created in: visited_urls.txt"
 fi
+
+echo "Parsing spider_out.txt for 404 and 429 errors..."
+grep -E '404 Not Found|429 Too Many Requests' "$outfile" | sed 's/.*--\([^-]*\)--.*/\1/' >> visited_urls.txt
+sort -u -o visited_urls.txt visited_urls.txt
+
+echo "URLs with 404 and 429 errors added to visited_urls.txt."
