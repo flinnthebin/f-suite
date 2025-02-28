@@ -1,7 +1,8 @@
 #!/usr/bin/env sh
 
-client_cert="/home/archer/uni/COMP6843/z3291100.p12"
+client_cert="/home/archer/uni/COMP6843/z3291100.pem"
 client_pass="z3291100"
+
 outfile="spider_out.txt"
 save_mode=0
 
@@ -10,7 +11,6 @@ usage() {
   exit 1
 }
 
-# Only parse the -s flag for save mode
 while getopts ":s" opt; do
   case ${opt} in
     s)
@@ -54,14 +54,16 @@ if [ -n "$client_cert" ]; then
     tmp_cert=$(mktemp) || { echo "Error creating temporary file."; exit 1; }
     tmp_key=$(mktemp) || { echo "Error creating temporary file."; exit 1; }
 
-    if ! openssl pkcs12 -in "$client_cert" -clcerts -nokeys -passin pass:"$client_pass" -out "$tmp_cert"; then
+    if ! openssl x509 -in "$client_cert" -out "$tmp_cert"; then
       echo "Error extracting certificate from $client_cert"
       rm -f "$tmp_cert" "$tmp_key"
       exit 1
     fi
 
-    if ! openssl pkcs12 -in "$client_cert" -nocerts -nodes -passin pass:"$client_pass" -out "$tmp_key"; then
-      echo "Error extracting private key from $client_cert"
+
+
+    if ! openssl rsa -in "$client_cert" -passin pass:"$client_pass" -out "$tmp_key"; then
+      echo "Error decrypting private key from $client_cert"
       rm -f "$tmp_cert" "$tmp_key"
       exit 1
     fi
