@@ -3,6 +3,7 @@
 client_cert="/home/archer/uni/COMP6843/z3291100.pem"
 client_pass="z3291100"
 outfile="/home/archer/spider/spider_out.txt"
+urls="home/archer/spider/urls.txt"
 save_mode=0
 
 usage() {
@@ -82,6 +83,6 @@ echo "Spidering complete."
 
 if [ "$save_mode" -eq 1 ]; then
   echo "Creating wordlist of visited URLs..."
-  find "$download_dir" -type f | sed "s|^$download_dir/|https://|g" > visited_urls.txt
-  echo "Visited URLs wordlist created in: visited_urls.txt"
+  find "$download_dir" -type f | sed "s|^$download_dir/|https://|g" > "$urls"
+  echo "Visited URLs wordlist created in: $urls"
 fi
