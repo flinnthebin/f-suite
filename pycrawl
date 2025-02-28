@@ -1,25 +1,6 @@
 #!/usr/bin/python
 """
-flag_spider.py
-
-This script uses a client PEM certificate to crawl the target domain.
-For every requested page it:
-  • Prints the HTTP status code.
-  • Waits a given delay between requests (starting at 0.5s) and will increase
-    the delay if a 429 (Too Many Requests) response is received.
-  • Searches the page content for a flag using a regex.
-     If a positive match is found, the flag is printed and the script exits.
-  • Otherwise, it extracts all links from the page (limiting itself to URLs on the same domain)
-    and adds new links to the crawl queue.
-  • In addition, it uses a supplied wordlist (in this example a small directory list)
-    to generate additional URLs to check.
-
-Usage:
-  ./flag_spider.py
-
-Make sure that:
-  • Your PEM file is accessible (it must include the private key if required).
-  • The wordlist file exists at the indicated path.
+pycrawl
 """
 
 import re
@@ -29,11 +10,15 @@ import requests
 from urllib.parse import urljoin, urlparse
 from bs4 import BeautifulSoup
 
-# ----- Configuration -----
+# ----- Optional command line argument for target -----
+if len(sys.argv) != 2:
+    print("Usage: {} URL".format(sys.argv[0]))
+    sys.exit(1)
+
+target = sys.argv[1]
+wordlist = "visited_urls.txt"   # use the output from wget-spider
 cert = "/home/archer/uni/COMP6843/z3291100.pem"
 flag_pattern = re.compile(r"COMP6443\{.*?\}")
-wordlist = "/home/archer/uni/COMP6843/visited_urls.txt"
-target = "https://spiderman.quoccacorp.com"
 initial_delay = 0.5
 
 # ----- Set up a requests session with our client certificate -----

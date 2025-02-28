@@ -2,8 +2,7 @@
 
 client_cert="/home/archer/uni/COMP6843/z3291100.pem"
 client_pass="z3291100"
-
-outfile="spider_out.txt"
+outfile="/home/archer/spider/spider_out.txt"
 save_mode=0
 
 usage() {
@@ -36,13 +35,13 @@ fi
 url="$1"
 
 if [ "$save_mode" -eq 1 ]; then
-  download_dir="spider_dir"
+  download_dir="/home/archer/spider"
   echo "Save mode enabled. Downloading HTML files into directory: $download_dir"
   mkdir -p "$download_dir" || { echo "Error creating directory: $download_dir"; exit 1; }
   mode_option="-P $download_dir"
 else
   echo "Running wget in spider (spider-only) mode..."
-  mode_option="--spider --ignore-robots --wait=1 --random-wait"
+  mode_option="--spider"
 fi
 
 echo "Target URL: $url"
@@ -86,9 +85,3 @@ if [ "$save_mode" -eq 1 ]; then
   find "$download_dir" -type f | sed "s|^$download_dir/|https://|g" > visited_urls.txt
   echo "Visited URLs wordlist created in: visited_urls.txt"
 fi
-
-echo "Parsing spider_out.txt for 404 and 429 errors..."
-grep -E '404 Not Found|429 Too Many Requests' "$outfile" | sed 's/.*--\([^-]*\)--.*/\1/' >> visited_urls.txt
-sort -u -o visited_urls.txt visited_urls.txt
-
-echo "URLs with 404 and 429 errors added to visited_urls.txt."

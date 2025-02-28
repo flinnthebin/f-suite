@@ -1,0 +1,23 @@
+#!/usr/bin/env sh
+
+if [ "$#" -ne 1 ]; then
+  echo "Usage: $0 URL"
+  exit 1
+fi
+
+url="$1"
+
+echo "Starting wget-spider with URL: $url"
+wget-spider -s "$url"
+if [ $? -ne 0 ]; then
+  echo "wget-spider encountered an error. Exiting."
+  exit 1
+fi
+
+if [ ! -f visited_urls.txt ]; then
+  echo "Error: visited_urls.txt not found. Did wget-spider run successfully?"
+  exit 1
+fi
+
+echo "wget-spider complete. Starting flag_spider.py..."
+pycrawl "$url"
