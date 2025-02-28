@@ -3,7 +3,7 @@
 client_cert="/home/archer/uni/COMP6843/z3291100.pem"
 client_pass="z3291100"
 outfile="/home/archer/spider/spider_out.txt"
-urls="home/archer/spider/urls.txt"
+urls="/home/archer/spider/urls.txt"
 save_mode=0
 
 usage() {
