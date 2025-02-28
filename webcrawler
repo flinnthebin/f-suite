@@ -6,7 +6,7 @@ if [ "$#" -ne 1 ]; then
 fi
 
 url="$1"
-
+urls="/home/archer/spider/urls.txt"
 echo "Starting wget-spider with URL: $url"
 wget-spider -s "$url"
 if [ $? -ne 0 ]; then
@@ -14,8 +14,8 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
-if [ ! -f visited_urls.txt ]; then
-  echo "Error: visited_urls.txt not found. Did wget-spider run successfully?"
+if [ ! -f "$urls" ]; then
+  echo "Error: $urls not found. Did wget-spider run successfully?"
   exit 1
 fi
 
