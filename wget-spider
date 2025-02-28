@@ -1,33 +1,18 @@
 #!/usr/bin/env sh
 
-# Usage:
-#   Spider mode (no page download):
-#       ./wget_spider.sh [-o output_file] [-c client_cert_file] [-p client_cert_password] URL
-#
-#   Save mode (download pages to "spider_dir" for grepping and wordlist creation):
-#       ./wget_spider.sh [-o output_file] [-c client_cert_file] [-p client_cert_password] -s URL
-
-outfile="wget_output.txt"
-client_cert=""
-client_pass=""
+client_cert="/home/archer/uni/COMP6843/z3291100.p12"
+client_pass="z3291100"
+outfile="spider_out.txt"
 save_mode=0
 
 usage() {
-  echo "Usage: $0 [-o output_file] [-c client_cert_file] [-p client_cert_password] [-s] URL"
+  echo "Usage: $0 [-s] URL"
   exit 1
 }
 
-while getopts ":o:c:p:s" opt; do
+# Only parse the -s flag for save mode
+while getopts ":s" opt; do
   case ${opt} in
-    o)
-      outfile="$OPTARG"
-      ;;
-    c)
-      client_cert="$OPTARG"
-      ;;
-    p)
-      client_pass="$OPTARG"
-      ;;
     s)
       save_mode=1
       ;;
@@ -65,18 +50,18 @@ echo "Logging wget output to: $outfile"
 
 if [ -n "$client_cert" ]; then
   if [ -n "$client_pass" ]; then
-    echo "Using client certificate: $client_cert with provided password."
+    echo "Using client certificate: $client_cert with provided password (hardcoded)."
     tmp_cert=$(mktemp) || { echo "Error creating temporary file."; exit 1; }
     tmp_key=$(mktemp) || { echo "Error creating temporary file."; exit 1; }
 
-    if ! openssl x509 -in "$client_cert" -out "$tmp_cert"; then
+    if ! openssl pkcs12 -in "$client_cert" -clcerts -nokeys -passin pass:"$client_pass" -out "$tmp_cert"; then
       echo "Error extracting certificate from $client_cert"
       rm -f "$tmp_cert" "$tmp_key"
       exit 1
     fi
 
-    if ! openssl rsa -in "$client_cert" -passin pass:"$client_pass" -out "$tmp_key"; then
-      echo "Error decrypting private key from $client_cert"
+    if ! openssl pkcs12 -in "$client_cert" -nocerts -nodes -passin pass:"$client_pass" -out "$tmp_key"; then
+      echo "Error extracting private key from $client_cert"
       rm -f "$tmp_cert" "$tmp_key"
       exit 1
     fi
