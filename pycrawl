@@ -15,7 +15,7 @@ if len(sys.argv) != 2:
     sys.exit(1)
 
 target = sys.argv[1]
-wordlist = "urls.txt"   # use the output from wget-spider
+wordlist = "/home/archer/spider/urls.txt"   # use the output from wget-spider
 cert = "/home/archer/uni/COMP6843/z3291100.pem"
 flag_pattern = re.compile(r"COMP6443\{.*?\}")
 
