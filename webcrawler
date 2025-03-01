@@ -19,5 +19,5 @@ if [ ! -f "$urls" ]; then
   exit 1
 fi
 
-echo "wget-spider complete. Starting flag_spider.py..."
+echo "wget-spider complete. Starting pycrawl..."
 pycrawl "$url"
